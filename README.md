@@ -1,0 +1,1 @@
+This helps me distribute my investments according to my portfolio's weights so I don't have to do any manual calculations.
