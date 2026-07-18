@@ -6,7 +6,6 @@ from os import getenv
 load_dotenv()
 
 
-DRIFT_THRESHOLD = Decimal("0.05")
 
 TARGET_WEIGHTS = {
     getenv("STOCK_1"): Decimal("0.1"),
@@ -16,12 +15,24 @@ TARGET_WEIGHTS = {
 }
 
 def is_drifted(portfolio, total_invested):
+    """
+    Determines whether significant drift is detected to assist main calculations in corrections.
+
+    Note: This is no longer being used as it's only beneficial in cases where you need to consider
+    capital gains, taxes, investment fees, etc... I've instead opted to just use target weights in each
+    investment which keeps my portfolio aligned within a small margin of error.
+    """
+    
+    DRIFT_THRESHOLD_UPPER_BOUND = Decimal("0.02")
+    drift = False
     for stock in portfolio:
         current_weight = portfolio[stock]["amount_invested"] / total_invested
-        drift_amount = abs(current_weight - TARGET_WEIGHTS[stock])
-        if drift_amount >= DRIFT_THRESHOLD:
-            return True
-    return False
+        drift_amount = current_weight - TARGET_WEIGHTS[stock]
+        portfolio[stock]["drift_amount"] = Decimal(str(drift_amount))
+        abs_drift_amount = abs(drift_amount)
+        if abs_drift_amount >= DRIFT_THRESHOLD_UPPER_BOUND:
+            drift = True
+    return drift
 
 def read_holdings(file_path, deposit):
     portfolio = {}
@@ -30,17 +41,13 @@ def read_holdings(file_path, deposit):
         read_file = reader(file)
         next(read_file)
         for line in read_file:
+            # Reader includes a few extra lines that would break the code below the if-statement
             if len(line) == 0: break
+            weight = TARGET_WEIGHTS[line[4]]
             portfolio[line[4]] = {
                 "share_price": Decimal(line[11]),
-                "amount_invested": Decimal(line[17])
+                "amount_invested": Decimal(line[17]),
+                "amount_to_invest": round(Decimal(weight * deposit), 2)
             }
             total_invested += portfolio[line[4]]["amount_invested"]
-        drifted = is_drifted(portfolio, total_invested)
-        for stock in portfolio:
-            if drifted:
-                weight = TARGET_WEIGHTS[stock]
-            else:
-                weight = portfolio[stock]["amount_invested"] / total_invested
-            portfolio[stock]["amount_to_invest"] = round(Decimal(weight * deposit), 2)
     return portfolio
