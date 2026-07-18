@@ -41,7 +41,7 @@ def read_holdings(file_path, deposit):
         read_file = reader(file)
         next(read_file)
         for line in read_file:
-            # Reader includes a few extra lines that would break the code below the if-statement
+            # The file includes a few extra lines after the important information, so I break as they aren't important
             if len(line) == 0: break
             weight = TARGET_WEIGHTS[line[4]]
             portfolio[line[4]] = {
